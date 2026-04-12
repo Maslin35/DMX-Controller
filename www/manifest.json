@@ -1,0 +1,21 @@
+{
+  "name": "DMX Pro Kontrolör - ERKAN UYAR",
+  "short_name": "DMX Kontrolör",
+  "description": "DMX USB & WIFI Kontrolör - Vector Light",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0c10",
+  "theme_color": "#0a0c10",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["utilities", "entertainment"],
+  "lang": "tr",
+  "dir": "ltr"
+}

@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DMX Pro Kontrolör - ERKAN UYAR</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DMX Kontrolör">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <style>
+        :root {
+            --bg-primary: #0a0c10; --bg-secondary: #14181f; --bg-tertiary: #1e242c;
+            --text-primary: #ffffff; --accent-primary: #ffd700; --accent-success: #32d74b;
+            --accent-wifi: #007aff; --accent-danger: #ff3b30; --border-color: #2a313c; --card-bg: #1a1f28;
+            --erkan-sari: #ffcc00;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { background: var(--bg-primary); color: var(--text-primary); padding: 10px; }
+
+        .title-section { text-align: center; margin-bottom: 5px; }
+        .title-section h2 { font-size: 20px; letter-spacing: 1px; background: linear-gradient(to right, #fff, var(--erkan-sari)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 8px rgba(255, 204, 0, 0.5)); padding: 10px 0; }
+
+        .status-bar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); padding: 10px 25px; border-radius: 40px; border: 1px solid var(--border-color); margin-bottom: 10px; }
+        .status-left { display: flex; gap: 25px; align-items: center; }
+        .status-led-wrapper { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+        .usb-indicator { display: flex; gap: 4px; }
+        .usb-led { width: 12px; height: 32px; border-radius: 4px; background: #222; border: 1px solid #333; transition: all 0.2s ease; box-shadow: inset 0 0 5px rgba(0,0,0,0.8); }
+        .usb-led.active { background: var(--accent-success) !important; border-color: #fff !important; box-shadow: 0 0 20px var(--accent-success), inset 0 0 10px rgba(255,255,255,0.8) !important; }
+        .usb-led:nth-child(2) { transition-delay: 0.05s; }
+        .usb-led:nth-child(3) { transition-delay: 0.1s; }
+        .wifi-indicator { display: flex; align-items: flex-end; gap: 3px; height: 36px; }
+        .wifi-led { width: 8px; border-radius: 4px 4px 0 0; background: #222; border: 1px solid #333; transition: all 0.2s ease; box-shadow: inset 0 0 5px rgba(0,0,0,0.8); }
+        .wifi-led:nth-child(1) { height: 12px; }
+        .wifi-led:nth-child(2) { height: 20px; }
+        .wifi-led:nth-child(3) { height: 28px; }
+        .wifi-led:nth-child(4) { height: 36px; }
+        .wifi-led.active { background: var(--accent-wifi) !important; border-color: #fff !important; box-shadow: 0 0 20px var(--accent-wifi), inset 0 0 15px rgba(255,255,255,0.9) !important; }
+        .led-label { font-size: 13px; font-weight: bold; }
+        .signature { font-size: 16px; font-weight: bold; color: var(--erkan-sari); text-shadow: 0 0 5px rgba(255, 204, 0, 0.5); white-space: nowrap; }
+
+        /* TABS */
+        .tab-bar { display: flex; gap: 5px; margin-bottom: 10px; }
+        .tab-btn { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 25px; padding: 12px 30px; color: white; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 16px; flex: 1; text-align: center; }
+        .tab-btn.active { background: var(--erkan-sari); color: #000; border-color: var(--erkan-sari); box-shadow: 0 0 20px rgba(255,204,0,0.4); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .container { display: flex; gap: 15px; flex-wrap: wrap; }
+        .main-panel { flex: 3; min-width: 350px; background: var(--bg-secondary); border-radius: 25px; padding: 15px; border: 1px solid var(--border-color); }
+        .side-panel { 
+            flex: 1; 
+            min-width: 260px; 
+            background: var(--bg-secondary); 
+            border-radius: 25px; 
+            padding: 15px; 
+            border: 2px solid var(--erkan-sari);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .screen { background: #000; color: var(--erkan-sari); padding: 15px; border-radius: 15px; font-size: 26px; text-align: right; margin-bottom: 15px; min-height: 70px; font-family: monospace; border: 1px solid var(--border-color); text-shadow: 0 0 10px rgba(255, 204, 0, 0.3); word-break: break-all; overflow-x: auto; white-space: nowrap; }
+        .screen.error { background: rgba(255, 59, 48, 0.8) !important; color: white !important; animation: shake 0.3s; }
+        .screen.blink-red { animation: redBlink 0.3s ease 2; background-color: #ff0000 !important; color: white !important; }
+        .screen.success-blink { animation: successBlink 0.3s ease 2; background-color: #32d74b !important; color: black !important; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        @keyframes redBlink { 0% { background-color: #000; color: #ffcc00; } 50% { background-color: #ff0000; color: white; } 100% { background-color: #000; color: #ffcc00; } }
+        @keyframes successBlink { 0% { background-color: #000; color: #ffcc00; } 50% { background-color: #32d74b; color: black; } 100% { background-color: #000; color: #ffcc00; } }
+
+        .channels-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; max-height: 500px; overflow-y: auto; padding: 15px; background: var(--bg-primary); border-radius: 15px; border: 2px solid var(--erkan-sari); scrollbar-width: thin; scrollbar-color: var(--erkan-sari) var(--bg-tertiary); }
+        .channels-grid::-webkit-scrollbar { width: 8px; }
+        .channels-grid::-webkit-scrollbar-track { background: var(--bg-tertiary); border-radius: 10px; }
+        .channels-grid::-webkit-scrollbar-thumb { background: var(--erkan-sari); border-radius: 10px; }
+        .channel-card { background: var(--card-bg); border-radius: 12px; padding: 12px 8px; border: 1px solid var(--border-color); text-align: center; transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .channel-card:hover { transform: translateY(-2px); border-color: var(--erkan-sari); box-shadow: 0 6px 12px rgba(255, 204, 0, 0.2); }
+        .channel-card.active { border-color: var(--erkan-sari); box-shadow: 0 0 20px rgba(255, 204, 0, 0.4); background: linear-gradient(145deg, var(--card-bg), #252e3a); }
+        .channel-card.on { background: linear-gradient(145deg, rgba(255, 204, 0, 0.1), rgba(255, 204, 0, 0.05)); border-color: var(--erkan-sari); }
+        .channel-number { font-size: 18px; font-weight: bold; color: #888; margin-bottom: 5px; }
+        .channel-card.active .channel-number { color: var(--erkan-sari); }
+        .channel-card.on .channel-number { color: var(--erkan-sari); }
+        .channel-value { color: var(--erkan-sari); font-weight: bold; font-size: 16px; margin-bottom: 8px; padding: 4px; background: rgba(0,0,0,0.3); border-radius: 20px; border: 1px solid rgba(255, 204, 0, 0.2); }
+        
+        .channel-card input[type=range] { 
+            width: 100%; 
+            height: 8px; 
+            -webkit-appearance: none; 
+            background: #333; 
+            border-radius: 10px; 
+            outline: none; 
+            margin-top: 5px;
+        }
+        .channel-card input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--erkan-sari);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--erkan-sari);
+            border: 2px solid #fff;
+            margin-top: -6px;
+        }
+        .channel-card input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--erkan-sari);
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+
+        .key-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 8px; 
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+        .btn-key { 
+            background: var(--bg-tertiary); 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            padding: 18px; 
+            font-size: 20px; 
+            color: white; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            min-width: 0;
+            text-align: center;
+        }
+        .btn-key:hover { transform: scale(0.98); opacity: 0.9; }
+        .btn-yellow { background: var(--erkan-sari) !important; color: #000 !important; }
+        .btn-red { background: var(--accent-danger) !important; color: white !important; }
+        .btn-success { background: var(--accent-success) !important; color: #000 !important; }
+
+        .baud-select { background: #000; color: var(--accent-success); border: 1px solid var(--accent-success); border-radius: 8px; padding: 8px; font-size: 14px; min-width: 180px; max-width: 100%; }
+        .btn-ui { padding: 10px 15px; border-radius: 12px; border: 1px solid var(--border-color); cursor: pointer; font-weight: bold; background: var(--bg-tertiary); color: white; transition: all 0.2s ease; white-space: nowrap; }
+        .btn-ui:hover { background: var(--bg-secondary); }
+        
+        .info-text { font-size: 11px; color: #888; text-align: center; margin-top: 10px; padding: 8px; background: rgba(255,204,0,0.1); border-radius: 8px; flex-shrink: 0; }
+
+        /* SUBMASTER STYLES */
+        .submaster-panel { background: var(--bg-secondary); border-radius: 25px; padding: 20px; border: 1px solid var(--border-color); }
+        .submaster-layout { display: flex; gap: 15px; }
+        .submaster-left { flex: 2; }
+        .submaster-right { flex: 3; background: var(--bg-primary); border-radius: 15px; padding: 15px; border: 1px solid var(--border-color); }
+        .submaster-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 10px; border: 2px solid var(--erkan-sari); padding: 10px; border-radius: 15px; }
+        .submaster-card { background: var(--card-bg); border-radius: 15px; padding: 10px 5px; border: 1px solid var(--border-color); text-align: center; cursor: pointer; transition: all 0.2s; }
+        .submaster-card.recording { border: 2px solid var(--accent-danger); box-shadow: 0 0 15px rgba(255,59,48,0.5); }
+        .submaster-card.active { border-color: var(--erkan-sari); box-shadow: 0 0 15px rgba(255,204,0,0.4); }
+        .sub-name-input { width: 100%; background: #000; border: 1px solid var(--border-color); color: var(--erkan-sari); padding: 2px; border-radius: 8px; text-align: center; font-size: 11px; font-weight: bold; margin-bottom: 5px; }
+        .sub-name-input:focus { outline: none; border-color: var(--erkan-sari); box-shadow: 0 0 5px var(--erkan-sari); }
+        .sub-slider { writing-mode: bt-lr; -webkit-appearance: slider-vertical; width: 40px; height: 90px; margin: 5px auto; background: #333; border-radius: 20px; accent-color: #ffcc00 !important; }
+        .sub-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 25px; height: 25px; border-radius: 50%; background: var(--erkan-sari); border: 2px solid white; cursor: pointer; box-shadow: 0 0 15px var(--erkan-sari); }
+        .sub-value { color: white; font-weight: bold; font-size: 12px; background: #000; padding: 3px; border-radius: 20px; margin: 5px 0; }
+        .sub-buttons { display: flex; flex-direction: column; gap: 3px; margin-top: 3px; }
+        .sub-btn { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 15px; padding: 5px; color: white; font-size: 10px; font-weight: bold; cursor: pointer; }
+        .sub-btn.record { background: var(--accent-danger); color: white; }
+        .sub-btn.play { background: var(--accent-success); color: black; }
+        .sub-btn.goback { background: #ff9500; color: black; }
+        .sub-btn.clear { background: #ff3b30; color: white; }
+        .sub-time-input { width: 100%; background: #000; border: 1px solid var(--border-color); color: var(--erkan-sari); padding: 3px; border-radius: 10px; text-align: center; font-size: 10px; margin: 3px 0; }
+        .submaster-channels-title { color: var(--erkan-sari); font-size: 16px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .submaster-channels-grid { 
+            display: grid; 
+            grid-template-columns: repeat(10, 1fr); 
+            gap: 8px; 
+            max-height: 700px; 
+            overflow-y: auto; 
+            padding: 5px; 
+            scrollbar-width: thin; 
+            scrollbar-color: var(--erkan-sari) var(--bg-tertiary); 
+            border: 2px solid var(--erkan-sari);
+            border-radius: 15px;
+        }
+        .submaster-channels-grid::-webkit-scrollbar { width: 4px; }
+        .submaster-channels-grid::-webkit-scrollbar-track { background: var(--bg-tertiary); border-radius: 4px; }
+        .submaster-channels-grid::-webkit-scrollbar-thumb { background: var(--erkan-sari); border-radius: 4px; }
+
+        /* Dosya Kaydet/Yükle Butonları */
+        .file-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .file-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--erkan-sari);
+            border-radius: 20px;
+            padding: 6px 12px;
+            color: var(--erkan-sari);
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        .file-btn:hover {
+            background: var(--erkan-sari);
+            color: #000;
+        }
+
+        .guide-btn-bottom {
+            background: var(--accent-wifi);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            color: white;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .guide-btn-bottom:hover {
+            background: #005bbf;
+            transform: scale(1.05);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 3px solid var(--erkan-sari);
+            border-radius: 25px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 50px rgba(255,204,0,0.5);
+        }
+        .modal-content h3 {
+            color: var(--erkan-sari);
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(255,204,0,0.5);
+        }
+        .modal-content h4 {
+            color: var(--erkan-sari);
+            margin: 15px 0 10px 0;
+        }
+        .modal-content ul {
+            padding-left: 25px;
+            color: #ddd;
+        }
+        .modal-content li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        .modal-content strong {
+            color: var(--erkan-sari);
+        }
+        .modal-close-btn {
+            background: var(--erkan-sari);
+            color: #000;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto 0;
+            width: fit-content;
+            transition: all 0.2s;
+        }
+        .modal-close-btn:hover {
+            background: #fff;
+            transform: scale(1.05);
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #888;
+            font-size: 18px;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: #000;
+            border: 2px solid var(--erkan-sari);
+            border-radius: 15px;
+            padding: 15px;
+            color: var(--erkan-sari);
+            font-size: 18px;
+            text-align: center;
+            margin: 15px 0;
+            outline: none;
+        }
+        .modal-input:focus {
+            box-shadow: 0 0 20px rgba(255,204,0,0.5);
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .modal-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--erkan-sari);
+            border-radius: 30px;
+            padding: 12px 25px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        .modal-btn.primary {
+            background: var(--erkan-sari);
+            color: #000;
+        }
+        .modal-btn:hover {
+            transform: scale(1.02);
+        }
+
+        @media (orientation: landscape) {
+            body { padding: 8px; }
+            .container { gap: 12px; }
+            .main-panel { min-width: 280px; padding: 12px; }
+            .side-panel { min-width: 240px; padding: 12px; max-width: 320px; }
+            .key-grid { gap: 6px; }
+            .btn-key { padding: 12px 8px; font-size: 18px; line-height: 1.2; }
+            .screen { font-size: 22px; padding: 12px; min-height: 60px; white-space: normal; word-break: break-all; }
+            .channels-grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); max-height: 470px; }
+            .status-bar { padding: 8px 15px; }
+            .status-left { gap: 15px; }
+            .led-label { font-size: 11px; }
+            .signature { font-size: 14px; }
+            .btn-ui { padding: 8px 12px; font-size: 13px; white-space: nowrap; }
+            .baud-select { font-size: 12px; padding: 6px; min-width: 150px; }
+            .main-panel > div:first-child { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+            .btn-ui, .baud-select { flex-shrink: 0; }
+            .submaster-grid { gap: 8px; }
+            .sub-slider { height: 80px; }
+            .submaster-channels-grid { grid-template-columns: repeat(10, 1fr); }
+        }
+        @media (orientation: portrait) { 
+            .side-panel { min-width: 280px; } 
+            .key-grid { gap: 8px; } 
+            .btn-key { padding: 18px; } 
+            .submaster-channels-grid { grid-template-columns: repeat(10, 1fr); }
+        }
+        @media (max-width: 700px) and (orientation: landscape) { 
+            .btn-key { padding: 8px 4px; font-size: 16px; } 
+            .side-panel { min-width: 200px; } 
+            .key-grid { gap: 4px; } 
+            .screen { font-size: 18px; padding: 10px; } 
+            .channel-card { padding: 8px 4px; } 
+            .channel-number { font-size: 14px; } 
+            .channel-value { font-size: 12px; } 
+            .submaster-channels-grid { grid-template-columns: repeat(10, 1fr); }
+        }
+        @media (max-width: 1000px) { 
+            .submaster-layout { flex-direction: column; } 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="modal-overlay" id="guideModal">
+        <div class="modal-content" id="modalContent"></div>
+    </div>
+
+    <div class="title-section"><h2>DMX USB & WIFI KONTROLÖR</h2></div>
+
+    <div class="status-bar">
+        <div class="status-left">
+            <div class="status-led-wrapper" style="background: rgba(50, 215, 75, 0.1); padding: 5px 12px; border-radius: 30px; border: 1px solid rgba(50, 215, 75, 0.3);">
+                <div class="usb-indicator"><div id="usbLed1" class="usb-led"></div><div id="usbLed2" class="usb-led"></div><div id="usbLed3" class="usb-led"></div></div>
+                <span class="led-label" style="color:var(--accent-success);">USB</span>
+            </div>
+            <div class="status-led-wrapper" style="background: rgba(0, 122, 255, 0.1); padding: 4px 12px; border-radius: 30px; border: 1px solid rgba(0, 122, 255, 0.3);">
+                <div class="wifi-indicator"><div id="wifiLed1" class="wifi-led"></div><div id="wifiLed2" class="wifi-led"></div><div id="wifiLed3" class="wifi-led"></div><div id="wifiLed4" class="wifi-led"></div></div>
+                <span class="led-label" style="color:var(--accent-wifi);">WIFI</span>
+            </div>
+        </div>
+        <div class="signature">VECTOR LIGHT</div>
+    </div>
+
+    <div class="tab-bar">
+        <div class="tab-btn active" data-tab="dmx">🎛️  DMX KONTROLÖR</div>
+        <div class="tab-btn" data-tab="submaster">🎚️ SUBMASTER</div>
+    </div>
+
+    <div class="container">
+        <div id="tab-dmx" class="tab-content active main-panel">
+            <div style="margin-bottom:15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button id="usbBtn" class="btn-ui" onclick="toggleUSB()">USB BAĞLA</button>
+                <button id="wifiBtn" class="btn-ui" onclick="toggleWiFi()">WIFI BAĞLA</button>
+                <select id="baudRate" class="baud-select">
+                    <option value="9600">🐌 9600 bps (Antika cihazlar)</option>
+                    <option value="19200">🚶 19200 bps (Eski dimmer'lar)</option>
+                    <option value="38400">🚶‍ 38400 bps (Çin malı)</option>
+                    <option value="57600">🚶‍ 57600 bps (Özel sistemler)</option>
+                    <option value="115200">🏃 115200 bps (Hızlı kontrolör)</option>
+                    <option value="250000" selected>⚡ 250000 bps (DMX512 STANDART)</option>
+                    <option value="500000">🏎️ 500000 bps (LED pixel)</option>
+                    <option value="1000000">✈️ 1.000.000 bps (Maksimum)</option>
+                </select>
+                <button class="btn-ui btn-red" onclick="allOff()">BLACKOUT</button>
+            </div>
+            <div class="channels-grid" id="dmxGrid"></div>
+        </div>
+
+        <div id="tab-submaster" class="tab-content main-panel submaster-panel">
+            <div class="submaster-layout">
+                <div class="submaster-left">
+                    <h3 style="margin-bottom:10px; color:var(--erkan-sari); text-align:center; font-size: 14px;">🎚️  SUBMASTER</h3>
+                    <div class="submaster-grid" id="submasterGrid"></div>
+                    <div style="display:flex; gap:5px; justify-content:center; margin-top:10px;">
+                        <button class="btn-ui btn-yellow" style="padding:5px 10px; font-size:11px;" onclick="releaseAllSubmasters()">TÜMÜNÜ DURDUR</button>
+                        <button class="btn-ui btn-red" style="padding:5px 10px; font-size:11px;" onclick="stopAllSubmasters()">TÜMÜNÜ SIFIRLA</button>
+                        <button class="guide-btn-bottom" onclick="openGuideModal()">📘 KILAVUZ</button>
+                    </div>
+                    <div class="file-buttons">
+                        <button class="file-btn" onclick="exportSubmastersToFile()">💾 SUB KAYDET (Dosya)</button>
+                        <button class="file-btn" onclick="importSubmastersFromFile()">📂 SUB YÜKLE (Dosya)</button>
+                    </div>
+                </div>
+                <div class="submaster-right">
+                    <div class="submaster-channels-title">
+                        <span>🎚️ TÜM KANALLAR (1-512)</span>
+                        <span id="activeChannelCount" style="font-size: 12px; color: #888;">0 aktif</span>
+                    </div>
+                    <div class="submaster-channels-grid" id="submasterAllChannelsGrid"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="side-panel" id="keypadPanel">
+            <div class="screen" id="scr">--</div>
+            <div class="key-grid">
+                <button class="btn-key" onclick="k('7')">7</button><button class="btn-key" onclick="k('8')">8</button><button class="btn-key" onclick="k('9')">9</button>
+                <button class="btn-key" onclick="k('4')">4</button><button class="btn-key" onclick="k('5')">5</button><button class="btn-key" onclick="k('6')">6</button>
+                <button class="btn-key" onclick="k('1')">1</button><button class="btn-key" onclick="k('2')">2</button><button class="btn-key" onclick="k('3')">3</button>
+                <button class="btn-key btn-red" onclick="back()">⌫</button>
+                <button class="btn-key" onclick="k('0')">0</button>
+                <button class="btn-key btn-yellow" onclick="k('+')">+</button>
+                <button class="btn-key btn-yellow" onclick="k('@')">@</button>
+                <button class="btn-key btn-yellow" onclick="k('THRU')">THRU</button>
+                <button class="btn-key btn-success" onclick="exe()">ENTER</button>
+                <button class="btn-key btn-yellow" onclick="qFull()">FULL</button>
+                <button class="btn-key btn-yellow" onclick="qOff()">OFF</button>
+                <button id="clrBtn" class="btn-key btn-red" onclick="handleClr()">CLR</button>
+            </div>
+            <div class="info-text">❗❗❗ DİKKAT ❗❗❗<br>
+                ‼️ ENTER'a çift basın: Son kapatılan kanalları geri çağırır<br>
+                🔄 Tekrar çift basın: Geri çağrılan kanalları kapatıp sıfırlar<br>
+                🧹  CLR çift basın: Tüm kanalları kapatıp sıfırlar.Bir kez basın ekranı temizler<br>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW kayıt hatası:', err));
+        }
+
+        const GUIDE_CONTENT = `
+            <h3>📘 SUBMASTER KULLANIM KILAVUZU</h3>
+            <h4>🎚️ Temel İşlemler</h4>
+            <ul>
+                <li><strong>🔴 KAYDET:</strong> Tıklayın, DMX'te aktif (ON) olan kanalları kaydeder.</li>
+                <li><strong>▶ OYNAT:</strong> Kaydedilmiş submaster'ı FULL'e doğru oynatır.</li>
+                <li><strong>◀◀ GERİOYNAT:</strong> Kaydedilmiş submaster'ı SIFIR'a doğru oynatır.</li>
+                <li><strong>⏹ DURDUR:</strong> Oynatılan submaster'ı anında durdurur.</li>
+                <li><strong>🧹 TEMİZLE:</strong> Submaster'daki tüm kayıtlı kanalları siler.</li>
+            </ul>
+            <h4>🖱️ Gelişmiş Özellikler</h4>
+            <ul>
+                <li><strong>Çift Tıklama:</strong> Submaster kartına çift tıklayarak kayıtlı kanalları görebilirsiniz.</li>
+                <li><strong>İsimlendirme:</strong> İsim kutusuna yazıp ENTER'a basınca klavye kapanır.</li>
+                <li><strong>Slider:</strong> Submaster'ın master seviyesini ayarlar (HTP).</li>
+            </ul>
+            <h4>💾 Dosya İşlemleri</h4>
+            <ul>
+                <li><strong>SUB KAYDET:</strong> Tüm submaster ayarlarını JSON olarak indirir.</li>
+                <li><strong>SUB YÜKLE:</strong> Kaydedilmiş JSON dosyasını yükler.</li>
+            </ul>
+            <button class="modal-close-btn" onclick="closeModal()">KAPAT</button>
+        `;
+
+        function openGuideModal() {
+            document.getElementById('modalContent').innerHTML = GUIDE_CONTENT;
+            document.getElementById('guideModal').style.display = 'flex';
+        }
+        function closeModal() {
+            document.getElementById('guideModal').style.display = 'none';
+        }
+
+        function showConnectionModal(title, message, type = 'info') {
+            const modal = document.getElementById('guideModal');
+            const modalContent = document.getElementById('modalContent');
+            
+            let icon = '📡';
+            let titleColor = 'var(--erkan-sari)';
+            if (type === 'success') { icon = '✅'; titleColor = 'var(--accent-success)'; }
+            else if (type === 'error') { icon = '❌'; titleColor = 'var(--accent-danger)'; }
+            else if (type === 'wait') { icon = '🔄'; titleColor = 'var(--accent-wifi)'; }
+            
+            modalContent.innerHTML = `
+                <h3 style="color: ${titleColor};">${icon} ${title}</h3>
+                <p style="text-align: center; color: #ddd; font-size: 16px; margin: 20px 0;">${message}</p>
+                <button class="modal-close-btn" onclick="closeModal()">TAMAM</button>
+            `;
+            
+            modal.style.display = 'flex';
+        }
+
+        function showWifiInputModal() {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('guideModal');
+                const modalContent = document.getElementById('modalContent');
+                const savedIp = localStorage.getItem('dmx_wifi_ip') || '192.168.10.221';
+                
+                modalContent.innerHTML = `
+                    <h3>📡 WIFI Bağlantısı</h3>
+                    <p style="text-align: center; color: #aaa; margin-bottom: 15px;">Vector Light IP Adresini Girin</p>
+                    <input type="text" class="modal-input" id="wifiIpInput" placeholder="Örn: 192.168.10.221" value="${savedIp}" autocomplete="off">
+                    <div class="modal-buttons" style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="modal-btn" onclick="resolveWifiModal(null)">İPTAL</button>
+                        <button class="modal-btn primary" onclick="resolveWifiModal(document.getElementById('wifiIpInput').value)">BAĞLAN</button>
+                    </div>
+                `;
+                
+                window.resolveWifiModal = (value) => {
+                    modal.style.display = 'none';
+                    resolve(value);
+                };
+                
+                modal.style.display = 'flex';
+                setTimeout(() => document.getElementById('wifiIpInput').focus(), 100);
+                document.getElementById('wifiIpInput').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        resolve(document.getElementById('wifiIpInput').value);
+                        modal.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        document.getElementById('guideModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        let wakeLock = null;
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => { requestWakeLock(); });
+                }
+            } catch (err) { console.error('Wake Lock hatası:', err); }
+        }
+        requestWakeLock();
+        
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                requestWakeLock();
+                if ((!ws || ws.readyState !== WebSocket.OPEN) && savedIp) {
+                    console.log('Sayfa görünür oldu, WiFi otomatik bağlanıyor...');
+                    connectWiFi(false);
+                }
+            }
+        });
+
+        let globalDmxData = new Uint8Array(513);
+        let lastSentFrame = new Uint8Array(513);
+        let clientId = Math.random().toString(36).substring(2, 10);
+        let frameSequence = 0;
+        
+        let screenTxt = "", activeCh = null, lastClrTime = 0;
+        let lastEnterTime = 0;
+        let lastClosedChannels = new Map();
+        let recalledChannels = new Map();
+        let isRecalledActive = false;
+        
+        let usbPort = null, usbWriter = null, ws = null;
+        let dmxInterval = null;
+        let connectionActive = false;
+        let frameCount = 0;
+        
+        let wifiKeepAliveInterval = null;
+        let wifiReconnectTimeout = null;
+        let savedIp = localStorage.getItem('dmx_wifi_ip');
+        
+        const DMX_INTERVAL_MS = 40;
+        const WIFI_KEEP_ALIVE_MS = 8000;
+        let reconnectAttempts = 0;
+
+        const submasterData = [];
+        const submasterIntervals = [];
+        let selectedSub = 0;
+
+        function recalculateHTPForChannels(channels) {
+            if (!channels || channels.length === 0) return;
+            for (let ch of channels) {
+                let maxVal = 0;
+                for (let i = 0; i < submasterData.length; i++) {
+                    const sub = submasterData[i];
+                    if (sub.channels.includes(ch)) {
+                        const slider = document.getElementById(`subSlider-${i}`);
+                        if (slider) {
+                            const sliderValue = parseInt(slider.value) || 0;
+                            const baseVal = sub.values.get(ch) || 0;
+                            const val = Math.round((baseVal * sliderValue) / 255);
+                            if (val > maxVal) maxVal = val;
+                        }
+                    }
+                }
+                if (globalDmxData[ch] !== maxVal) {
+                    globalDmxData[ch] = maxVal;
+                    updateChannelUI(ch, maxVal);
+                }
+            }
+            updateActiveChannelCount();
+        }
+
+        function exportSubmastersToFile() {
+            try {
+                const exportData = [];
+                for (let i = 0; i < submasterData.length; i++) {
+                    const sub = submasterData[i];
+                    exportData.push({
+                        index: i,
+                        name: sub.name,
+                        time: sub.time,
+                        channels: sub.channels,
+                        values: Array.from(sub.values.entries())
+                    });
+                }
+                
+                const jsonStr = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `dmx_submasters_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert('✅ Submaster kayıtları dosyaya indirildi!');
+            } catch (e) {
+                console.error('Dışa aktarma hatası:', e);
+                alert('❌ Kaydetme başarısız!');
+            }
+        }
+
+        function importSubmastersFromFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const importedData = JSON.parse(event.target.result);
+                        
+                        for (let i = 0; i < 20; i++) {
+                            if (submasterIntervals[i]) {
+                                clearInterval(submasterIntervals[i]);
+                                submasterIntervals[i] = null;
+                            }
+                        }
+                        
+                        for (let i = 0; i < 20; i++) {
+                            submasterData[i] = { 
+                                channels: [], 
+                                values: new Map(), 
+                                time: 2.0, 
+                                isRecording: false, 
+                                isPlaying: false, 
+                                name: `SUB ${i+1}` 
+                            };
+                        }
+                        
+                        for (const item of importedData) {
+                            const idx = item.index;
+                            if (idx >= 0 && idx < 20) {
+                                submasterData[idx] = {
+                                    channels: item.channels || [],
+                                    values: new Map(item.values || []),
+                                    time: item.time || 2.0,
+                                    isRecording: false,
+                                    isPlaying: false,
+                                    name: item.name || `SUB ${idx+1}`
+                                };
+                            }
+                        }
+                        
+                        for (let i = 0; i < 20; i++) {
+                            const data = submasterData[i];
+                            document.getElementById(`subName-${i}`).value = data.name;
+                            document.getElementById(`subTime-${i}`).value = data.time;
+                            
+                            let maxValue = 0;
+                            for (let val of data.values.values()) if (val > maxValue) maxValue = val;
+                            document.getElementById(`subSlider-${i}`).value = maxValue;
+                            document.getElementById(`subVal-${i}`).innerText = maxValue === 0 ? 'OFF' : (maxValue === 255 ? 'FULL' : Math.round(maxValue/2.55) + '%');
+                            
+                            const btn = document.getElementById(`subRec-${i}`);
+                            btn.innerHTML = '🔴 KAYDET';
+                            btn.style.background = '';
+                            btn.style.color = '';
+                            document.getElementById(`sub-${i}`).classList.remove('recording', 'active');
+                        }
+                        
+                        alert('✅ Submaster kayıtları yüklendi!');
+                    } catch (e) {
+                        console.error('İçe aktarma hatası:', e);
+                        alert('❌ Dosya yükleme başarısız! Geçersiz format.');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        function parseChannelList(input) {
+            let channels = [];
+            let parts = input.split('+');
+            for (let part of parts) {
+                part = part.trim();
+                if (part.includes('THRU')) {
+                    let thru = part.split('THRU');
+                    let start = parseInt(thru[0]);
+                    let end = parseInt(thru[1]);
+                    if (!isNaN(start) && !isNaN(end)) {
+                        for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
+                            if (i >= 1 && i <= 512) channels.push(i);
+                        }
+                    }
+                } else {
+                    let ch = parseInt(part);
+                    if (!isNaN(ch) && ch >= 1 && ch <= 512) channels.push(ch);
+                }
+            }
+            return [...new Set(channels)];
+        }
+
+        function broadcastDmxChange(channel, value) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const packet = { type: 'dmx_change', senderId: clientId, channel: channel, value: value, seq: ++frameSequence };
+            ws.send(JSON.stringify(packet));
+        }
+
+        function throttle(func, limit) {
+            let lastFunc;
+            let lastRan;
+            return function() {
+                const context = this;
+                const args = arguments;
+                if (!lastRan) {
+                    func.apply(context, args);
+                    lastRan = Date.now();
+                } else {
+                    clearTimeout(lastFunc);
+                    lastFunc = setTimeout(function() {
+                        if ((Date.now() - lastRan) >= limit) {
+                            func.apply(context, args);
+                            lastRan = Date.now();
+                        }
+                    }, limit - (Date.now() - lastRan));
+                }
+            }
+        }
+
+        const broadcastSubmasterValue = throttle((idx, value) => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({
+                type: 'submaster_value_change',
+                senderId: clientId,
+                index: idx,
+                value: value,
+                timestamp: Date.now()
+            }));
+        }, 40);
+
+        function updateSubmasterUIAndSync(idx, value) {
+            const data = submasterData[idx];
+            if (!data) return;
+
+            const slider = document.getElementById(`subSlider-${idx}`);
+            const valText = document.getElementById(`subVal-${idx}`);
+            
+            if (slider) slider.value = value;
+            if (valText) {
+                valText.innerText = value === 0 ? 'OFF' : (value === 255 ? 'FULL' : Math.round(value/2.55) + '%');
+            }
+
+            if (!data.isPlaying && data.channels.length > 0) {
+                for (let [ch, baseVal] of data.values.entries()) {
+                    let finalVal = Math.round((baseVal * value) / 255);
+                    upd(ch, finalVal);
+                }
+            }
+
+            broadcastSubmasterValue(idx, value);
+        }
+
+        function handleIncomingSync(packet) {
+            if (packet.senderId === clientId) return;
+
+            if (packet.type === 'submaster_value_change') {
+                const idx = packet.index;
+                const remoteValue = packet.value;
+                const data = submasterData[idx];
+                
+                if (data) {
+                    const slider = document.getElementById(`subSlider-${idx}`);
+                    const valText = document.getElementById(`subVal-${idx}`);
+                    if (slider) slider.value = remoteValue;
+                    if (valText) valText.innerText = remoteValue === 0 ? 'OFF' : (remoteValue === 255 ? 'FULL' : Math.round(remoteValue/2.55) + '%');
+                    
+                    if (!data.isPlaying && data.channels.length > 0) {
+                        for (let [ch, baseVal] of data.values.entries()) {
+                            let finalVal = Math.round((baseVal * remoteValue) / 255);
+                            globalDmxData[ch] = finalVal;
+                            updateChannelUI(ch, finalVal);
+                        }
+                    }
+                }
+            }
+        }
+
+        function broadcastSubmasterSync(idx) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const data = submasterData[idx];
+            const packet = {
+                type: 'submaster_sync',
+                index: idx,
+                name: data.name,
+                time: data.time,
+                isRecording: data.isRecording,
+                channels: data.channels,
+                values: Array.from(data.values.entries())
+            };
+            ws.send(JSON.stringify(packet));
+        }
+
+        function broadcastSubmasterClear(idx) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'submaster_clear', index: idx }));
+        }
+
+        function broadcastAllSubmastersClear() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'submaster_clear_all' }));
+        }
+
+        function broadcastSubmasterPlayState(idx, isPlaying, currentValue) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({
+                type: 'submaster_play_state',
+                senderId: clientId,
+                index: idx,
+                isPlaying: isPlaying,
+                currentValue: currentValue,
+                timestamp: Date.now()
+            }));
+        }
+
+        function handleSubmasterPlayState(packet) {
+            if (packet.senderId === clientId) return;
+            
+            const idx = packet.index;
+            const isPlaying = packet.isPlaying;
+            const currentValue = packet.currentValue;
+            const data = submasterData[idx];
+            
+            if (!data) return;
+            
+            data.isPlaying = isPlaying;
+            
+            const slider = document.getElementById(`subSlider-${idx}`);
+            const valText = document.getElementById(`subVal-${idx}`);
+            const card = document.getElementById(`sub-${idx}`);
+            
+            if (slider) slider.value = currentValue;
+            if (valText) {
+                valText.innerText = currentValue === 0 ? 'OFF' : (currentValue === 255 ? 'FULL' : Math.round(currentValue/2.55) + '%');
+            }
+            if (card) {
+                if (isPlaying) card.classList.add('active');
+                else card.classList.remove('active');
+            }
+            
+            if (data.channels.length > 0) {
+                const ratio = currentValue / 255;
+                for (let ch of data.channels) {
+                    const finalVal = Math.round((data.values.get(ch) || 255) * ratio);
+                    globalDmxData[ch] = finalVal;
+                    updateChannelUI(ch, finalVal);
+                }
+            }
+            
+            if (!isPlaying && submasterIntervals[idx]) {
+                clearInterval(submasterIntervals[idx]);
+                submasterIntervals[idx] = null;
+            }
+        }
+
+        function broadcastSubmasterFullSync(idx, startTime, duration, startValue) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({
+                type: 'submaster_full_sync',
+                senderId: clientId,
+                index: idx,
+                startTime: startTime,
+                duration: duration,
+                startValue: startValue,
+                timestamp: Date.now()
+            }));
+        }
+
+        function handleSubmasterFullSync(packet) {
+            if (packet.senderId === clientId) return;
+            
+            const idx = packet.index;
+            const startTime = packet.startTime;
+            const duration = packet.duration;
+            const startValue = packet.startValue;
+            const data = submasterData[idx];
+            
+            if (!data || data.channels.length === 0) return;
+            
+            if (submasterIntervals[idx]) {
+                clearInterval(submasterIntervals[idx]);
+                submasterIntervals[idx] = null;
+            }
+            
+            data.isPlaying = true;
+            document.getElementById(`sub-${idx}`).classList.add('active');
+            
+            submasterIntervals[idx] = setInterval(() => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const progress = Math.min(elapsed / duration, 1.0);
+                const currentValue = Math.round(startValue + (255 - startValue) * progress);
+                
+                const slider = document.getElementById(`subSlider-${idx}`);
+                const valText = document.getElementById(`subVal-${idx}`);
+                if (slider) slider.value = currentValue;
+                if (valText) {
+                    valText.innerText = currentValue === 0 ? 'OFF' : (currentValue === 255 ? 'FULL' : Math.round(currentValue/2.55) + '%');
+                }
+                
+                if (data.channels.length > 0) {
+                    const ratio = currentValue / 255;
+                    for (let ch of data.channels) {
+                        const finalVal = Math.round((data.values.get(ch) || 255) * ratio);
+                        if (finalVal > globalDmxData[ch]) {
+                            globalDmxData[ch] = finalVal;
+                            updateChannelUI(ch, finalVal);
+                        }
+                    }
+                    updateActiveChannelCount();
+                }
+                
+                if (progress >= 1.0) {
+                    clearInterval(submasterIntervals[idx]);
+                    submasterIntervals[idx] = null;
+                    data.isPlaying = false;
+                    document.getElementById(`sub-${idx}`).classList.remove('active');
+                }
+            }, 20);
+        }
+
+        function broadcastSubmasterStop(idx) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({
+                type: 'submaster_stop',
+                senderId: clientId,
+                index: idx,
+                timestamp: Date.now()
+            }));
+        }
+
+        function handleSubmasterStop(packet) {
+            if (packet.senderId === clientId) return;
+            
+            const idx = packet.index;
+            const data = submasterData[idx];
+            
+            if (!data) return;
+            
+            if (submasterIntervals[idx]) {
+                clearInterval(submasterIntervals[idx]);
+                submasterIntervals[idx] = null;
+            }
+            
+            data.isPlaying = false;
+            document.getElementById(`sub-${idx}`).classList.remove('active');
+        }
+
+        function applyRemoteSubmasterSync(packet) {
+            const idx = packet.index;
+            if (idx < 0 || idx >= 20) return;
+            
+            const data = submasterData[idx];
+            data.name = packet.name;
+            data.time = packet.time;
+            data.isRecording = packet.isRecording;
+            data.channels = packet.channels;
+            data.values = new Map(packet.values);
+            
+            document.getElementById(`subName-${idx}`).value = data.name;
+            document.getElementById(`subTime-${idx}`).value = data.time;
+            
+            if (data.isRecording) {
+                document.getElementById(`subRec-${idx}`).innerHTML = '⏹ KAYDI DURDUR';
+                document.getElementById(`sub-${idx}`).classList.add('recording');
+            } else {
+                document.getElementById(`subRec-${idx}`).innerHTML = '🔴 KAYDET';
+                document.getElementById(`sub-${idx}`).classList.remove('recording');
+            }
+            
+            let maxValue = 0;
+            for (let val of data.values.values()) if (val > maxValue) maxValue = val;
+            document.getElementById(`subSlider-${idx}`).value = maxValue;
+            document.getElementById(`subVal-${idx}`).innerText = maxValue === 0 ? 'OFF' : (maxValue === 255 ? 'FULL' : Math.round(maxValue/2.55) + '%');
+        }
+
+        function updateChannelUI(ch, v) {
+            const text = document.getElementById(`v-${ch}`);
+            const card = document.getElementById(`c-${ch}`);
+            if (text) {
+                if (v === 0) text.innerText = "OFF";
+                else if (v === 255) text.innerText = "FULL";
+                else text.innerText = Math.round(v / 2.55) + "%";
+            }
+            if (card) {
+                const slider = card.querySelector('input');
+                if (slider) {
+                    slider.value = v;
+                    const percent = (v / 255) * 100;
+                    slider.style.background = `linear-gradient(90deg, #ffcc00 0%, #ffcc00 ${percent}%, #333333 ${percent}%, #333333 100%)`;
+                }
+                if (v > 0) card.classList.add('on');
+                else card.classList.remove('on');
+            }
+            
+            const subCard = document.getElementById(`subChan-${ch}`);
+            if (subCard) {
+                const subVal = subCard.querySelector('.channel-value');
+                const subSlider = subCard.querySelector('input');
+                if (subVal) {
+                    if (v === 0) subVal.innerText = 'OFF';
+                    else if (v === 255) subVal.innerText = 'FULL';
+                    else subVal.innerText = Math.round(v / 2.55) + '%';
+                }
+                if (subSlider) {
+                    subSlider.value = v;
+                    const percent = (v / 255) * 100;
+                    subSlider.style.background = `linear-gradient(90deg, #ffcc00 0%, #ffcc00 ${percent}%, #333 ${percent}%, #333 100%)`;
+                }
+                subCard.classList.toggle('on', v > 0);
+            }
+        }
+
+        function applyRemoteChange(channel, value, senderId) {
+            if (senderId === clientId) return;
+            if (globalDmxData[channel] === value) return;
+            
+            globalDmxData[channel] = value;
+            updateChannelUI(channel, value);
+            lastSentFrame[channel] = value;
+            updateActiveChannelCount();
+        }
+
+        function upd(ch, v) {
+            v = Math.min(255, Math.max(0, parseInt(v) || 0));
+            if (ch < 1 || ch > 512) return;
+            if (globalDmxData[ch] === v) return;
+            
+            globalDmxData[ch] = v;
+            updateChannelUI(ch, v);
+            broadcastDmxChange(ch, v);
+            updateActiveChannelCount();
+        }
+
+        function updateActiveChannelCount() {
+            let count = 0;
+            for (let i = 1; i <= 512; i++) if (globalDmxData[i] > 0) count++;
+            const span = document.getElementById('activeChannelCount');
+            if (span) span.innerText = count + ' aktif';
+        }
+
+        function applyToChannels(channelList, value, saveToClosed = true) {
+            if (saveToClosed && value === 0) {
+                for (let ch of channelList) {
+                    if (globalDmxData[ch] > 0 && !recalledChannels.has(ch)) {
+                        lastClosedChannels.set(ch, globalDmxData[ch]);
+                    }
+                }
+            }
+            for (let ch of channelList) {
+                upd(ch, value);
+                if (value === 0 && recalledChannels.has(ch)) {
+                    recalledChannels.delete(ch);
+                }
+            }
+            if (value === 0 && saveToClosed) {
+                isRecalledActive = false;
+            }
+        }
+
+        function recallLastClosed() {
+            if (lastClosedChannels.size === 0) {
+                const scrDiv = document.getElementById('scr');
+                scrDiv.classList.add('error');
+                setTimeout(() => scrDiv.classList.remove('error'), 400);
+                return false;
+            }
+            recalledChannels.clear();
+            for (let [ch, val] of lastClosedChannels) {
+                upd(ch, val);
+                recalledChannels.set(ch, val);
+            }
+            isRecalledActive = true;
+            const scrDiv = document.getElementById('scr');
+            scrDiv.classList.add('success-blink');
+            setTimeout(() => scrDiv.classList.remove('success-blink'), 600);
+            return true;
+        }
+        
+        function closeRecalledAndReset() {
+            if (recalledChannels.size === 0) return false;
+            for (let ch of recalledChannels.keys()) { upd(ch, 0); }
+            for (let ch of recalledChannels.keys()) { lastClosedChannels.delete(ch); }
+            recalledChannels.clear();
+            isRecalledActive = false;
+            const scrDiv = document.getElementById('scr');
+            scrDiv.classList.add('blink-red');
+            setTimeout(() => scrDiv.classList.remove('blink-red'), 600);
+            return true;
+        }
+
+        function exe() {
+            const now = Date.now();
+            if (now - lastEnterTime < 500 && lastEnterTime !== 0) {
+                lastEnterTime = 0;
+                if (isRecalledActive && recalledChannels.size > 0) {
+                    closeRecalledAndReset();
+                    screenTxt = "";
+                    updateScreen();
+                    return;
+                } else {
+                    recallLastClosed();
+                    screenTxt = "";
+                    updateScreen();
+                    return;
+                }
+            }
+            lastEnterTime = now;
+            
+            if (screenTxt && !isNaN(parseInt(screenTxt)) && !screenTxt.includes('@') && !screenTxt.includes('THRU') && !screenTxt.includes('+')) {
+                const ch = parseInt(screenTxt);
+                if (ch >= 1 && ch <= 512) {
+                    activeCh = ch;
+                    document.querySelectorAll('.channel-card').forEach(c => c.classList.remove('active'));
+                    const target = document.getElementById(`c-${ch}`);
+                    if (target) {
+                        target.classList.add('active');
+                        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    screenTxt = "";
+                    updateScreen();
+                    return;
+                }
+            }
+            
+            if (!screenTxt) return;
+            
+            if (screenTxt.includes('@')) {
+                const parts = screenTxt.split('@');
+                if (parts.length === 2 && parts[0].length > 0 && parts[1].length > 0) {
+                    let percent = parseInt(parts[1]);
+                    if (!isNaN(percent)) {
+                        percent = Math.min(100, Math.max(0, percent));
+                        let dmxValue = Math.round(percent * 255 / 100);
+                        let channels = parseChannelList(parts[0]);
+                        if (channels.length > 0) {
+                            applyToChannels(channels, dmxValue);
+                            screenTxt = "";
+                            updateScreen();
+                            return;
+                        }
+                    }
+                }
+                showError();
+                screenTxt = "";
+                updateScreen();
+                return;
+            }
+            
+            if (screenTxt.includes('THRU')) {
+                let channels = parseChannelList(screenTxt);
+                if (channels.length > 0) {
+                    activeCh = channels[channels.length - 1];
+                    document.querySelectorAll('.channel-card').forEach(c => c.classList.remove('active'));
+                    let target = document.getElementById(`c-${activeCh}`);
+                    if (target) target.classList.add('active');
+                    screenTxt = "";
+                    updateScreen();
+                    return;
+                }
+            }
+            
+            let n = parseInt(screenTxt);
+            if (!isNaN(n) && n >= 1 && n <= 512) {
+                activeCh = n;
+                document.querySelectorAll('.channel-card').forEach(c => c.classList.remove('active'));
+                let target = document.getElementById(`c-${n}`);
+                if (target) target.classList.add('active');
+                screenTxt = "";
+                updateScreen();
+                return;
+            }
+            
+            showError();
+            screenTxt = "";
+            updateScreen();
+        }
+
+        function qFull() {
+            if (screenTxt && screenTxt.includes('@')) {
+                const scrDiv = document.getElementById('scr');
+                scrDiv.classList.add('blink-red');
+                setTimeout(() => scrDiv.classList.remove('blink-red'), 600);
+                return;
+            }
+            if (screenTxt && screenTxt.length > 0) {
+                if (screenTxt.includes('THRU') || screenTxt.includes('+')) {
+                    let channels = parseChannelList(screenTxt);
+                    if (channels.length > 0) { applyToChannels(channels, 255); screenTxt = ""; updateScreen(); return; }
+                }
+                let ch = parseInt(screenTxt);
+                if (!isNaN(ch) && ch >= 1 && ch <= 512) { upd(ch, 255); screenTxt = ""; updateScreen(); return; }
+            }
+            if (activeCh !== null && activeCh >= 1 && activeCh <= 512) { upd(activeCh, 255); screenTxt = ""; updateScreen(); return; }
+            showError();
+        }
+
+        function qOff() {
+            if (screenTxt && screenTxt.includes('@')) {
+                let parts = screenTxt.split('@');
+                if (parts.length === 2) {
+                    let channels = parseChannelList(parts[0]);
+                    if (channels.length > 0) { applyToChannels(channels, 0); screenTxt = ""; updateScreen(); return; }
+                }
+            }
+            if (screenTxt && (screenTxt.includes('THRU') || screenTxt.includes('+'))) {
+                let channels = parseChannelList(screenTxt);
+                if (channels.length > 0) { applyToChannels(channels, 0); screenTxt = ""; updateScreen(); return; }
+            }
+            if (activeCh !== null) { applyToChannels([activeCh], 0); screenTxt = ""; updateScreen(); return; }
+            if (screenTxt && !isNaN(parseInt(screenTxt))) {
+                let ch = parseInt(screenTxt);
+                if (ch >= 1 && ch <= 512) { applyToChannels([ch], 0); screenTxt = ""; updateScreen(); return; }
+            }
+            allOff();
+            screenTxt = "";
+            updateScreen();
+        }
+
+        function sel(ch) {
+            activeCh = ch;
+            document.querySelectorAll('.channel-card').forEach(x => x.classList.remove('active'));
+            if (ch) {
+                const target = document.getElementById(`c-${ch}`);
+                if (target) { target.classList.add('active'); target.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+            }
+        }
+
+        function allOff() {
+            for (let i = 1; i <= 512; i++) {
+                if (globalDmxData[i] > 0 && !recalledChannels.has(i)) { lastClosedChannels.set(i, globalDmxData[i]); }
+                upd(i, 0);
+            }
+            recalledChannels.clear();
+            isRecalledActive = false;
+        }
+
+        function handleClr() {
+            const now = Date.now();
+            if (now - lastClrTime < 400) {
+                allOff();
+                lastClosedChannels.clear();
+                recalledChannels.clear();
+                isRecalledActive = false;
+                sel(null);
+                screenTxt = "";
+                updateScreen();
+                lastClrTime = 0;
+                return;
+            }
+            screenTxt = "";
+            updateScreen();
+            lastClrTime = now;
+        }
+
+        function k(v) { screenTxt += v; updateScreen(); }
+        function back() { screenTxt = screenTxt.slice(0, -1); updateScreen(); }
+        function updateScreen() { document.getElementById('scr').innerText = screenTxt || "--"; }
+        function showError() { const s = document.getElementById('scr'); s.classList.add('error'); setTimeout(() => s.classList.remove('error'), 400); }
+
+        function startWiFiKeepAlive() {
+            if (wifiKeepAliveInterval) clearInterval(wifiKeepAliveInterval);
+            wifiKeepAliveInterval = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) { try { ws.send(new Uint8Array([0])); } catch(e) {} }
+                else if (ws && ws.readyState !== WebSocket.CONNECTING && savedIp) {
+                    if (wifiReconnectTimeout) clearTimeout(wifiReconnectTimeout);
+                    reconnectAttempts++;
+                    let delay = Math.min(5000, 1000 * reconnectAttempts);
+                    wifiReconnectTimeout = setTimeout(() => { connectWiFi(false); }, delay);
+                }
+            }, WIFI_KEEP_ALIVE_MS);
+        }
+        
+        function stopWiFiKeepAlive() {
+            if (wifiKeepAliveInterval) { clearInterval(wifiKeepAliveInterval); wifiKeepAliveInterval = null; }
+            if (wifiReconnectTimeout) { clearTimeout(wifiReconnectTimeout); wifiReconnectTimeout = null; }
+        }
+        
+        function updateWiFiLEDs(connected) {
+            const leds = ['wifiLed1', 'wifiLed2', 'wifiLed3', 'wifiLed4'];
+            if (connected) { leds.forEach(led => document.getElementById(led).classList.add('active')); }
+            else { leds.forEach(led => document.getElementById(led).classList.remove('active')); }
+        }
+
+        function updateUSBLEDs(connected) {
+            const leds = ['usbLed1', 'usbLed2', 'usbLed3'];
+            if (connected) { leds.forEach(led => document.getElementById(led).classList.add('active')); }
+            else { leds.forEach(led => document.getElementById(led).classList.remove('active')); }
+        }
+
+        function sendDMXFrame() {
+            if (!connectionActive && !usbWriter && (!ws || ws.readyState !== WebSocket.OPEN)) return;
+            
+            const frame = new Uint8Array(513);
+            frame[0] = 0;
+            for (let i = 1; i <= 512; i++) { frame[i] = globalDmxData[i]; }
+            
+            if (usbWriter) { 
+                usbWriter.write(frame).catch(e => console.error('USB yazma hatası:', e)); 
+            }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                try {
+                    const wifiFrame = new Uint8Array(512);
+                    for (let i = 0; i < 512; i++) { wifiFrame[i] = frame[i + 1]; }
+                    ws.send(wifiFrame);
+                    reconnectAttempts = 0;
+                } catch(e) {}
+            }
+        }
+
+        function startDMX() { if (dmxInterval) return; dmxInterval = setInterval(sendDMXFrame, DMX_INTERVAL_MS); }
+        function stopDMX() { if (dmxInterval) { clearInterval(dmxInterval); dmxInterval = null; } }
+
+        async function disconnectUSB() {
+            if (usbWriter) {
+                try { await usbWriter.close(); } catch(e) {}
+                try { usbWriter.releaseLock(); } catch(e) {}
+                usbWriter = null;
+            }
+            if (usbPort) {
+                try { await usbPort.close(); } catch(e) {}
+                usbPort = null;
+            }
+            updateUSBLEDs(false);
+            connectionActive = !!(ws && ws.readyState === WebSocket.OPEN);
+            if (!connectionActive) stopDMX();
+            document.getElementById('usbBtn').innerText = 'USB BAĞLA';
+        }
+
+        async function connectUSB() {
+            try {
+                const baud = parseInt(document.getElementById('baudRate').value);
+                usbPort = await navigator.serial.requestPort();
+                await usbPort.open({ baudRate: baud, dataBits: 8, stopBits: 2, parity: "none", flowControl: "none", bufferSize: 1024 });
+                usbWriter = usbPort.writable.getWriter();
+                updateUSBLEDs(true);
+                connectionActive = true;
+                startDMX();
+                document.getElementById('usbBtn').innerText = 'USB KES';
+            } catch(e) { console.error('USB hatası:', e); }
+        }
+
+        async function toggleUSB() {
+            if (usbPort || usbWriter) {
+                await disconnectUSB();
+                showConnectionModal('ℹ️ USB Kesildi', 'DMX çıkışı durduruldu.', 'info');
+            } else {
+                if (!navigator.serial) {
+                    showConnectionModal('❌ USB Desteklenmiyor', 'Tarayıcınız WebSerial API\'yi desteklemiyor. Lütfen Chrome/Edge kullanın.', 'error');
+                    return;
+                }
+                
+                showConnectionModal('🔄 USB Bağlantısı', 'Lütfen USB cihazınızı seçin...', 'wait');
+                
+                try {
+                    const baud = parseInt(document.getElementById('baudRate').value);
+                    usbPort = await navigator.serial.requestPort();
+                    await usbPort.open({ baudRate: baud, dataBits: 8, stopBits: 2, parity: "none", flowControl: "none", bufferSize: 1024 });
+                    usbWriter = usbPort.writable.getWriter();
+                    updateUSBLEDs(true);
+                    connectionActive = true;
+                    startDMX();
+                    document.getElementById('usbBtn').innerText = 'USB KES';
+                    showConnectionModal('✅ USB Bağlandı', `DMX çıkışı aktif! Baud Rate: ${baud} bps`, 'success');
+                } catch(e) {
+                    console.error('USB hatası:', e);
+                    if (e.name === 'NotFoundError') {
+                        closeModal();
+                    } else if (e.name === 'SecurityError') {
+                        showConnectionModal('❌ USB İzin Hatası', 'Cihaza erişim izni reddedildi!', 'error');
+                    } else {
+                        showConnectionModal('❌ USB Hatası', 'Bağlantı kurulamadı!', 'error');
+                    }
+                }
+            }
+        }
+
+        function disconnectWiFi() {
+            stopWiFiKeepAlive();
+            if (ws) {
+                try { ws.onclose = null; ws.onerror = null; ws.onmessage = null; ws.close(); } catch(e) {}
+                ws = null;
+            }
+            updateWiFiLEDs(false);
+            connectionActive = !!(usbWriter);
+            if (!connectionActive) stopDMX();
+            document.getElementById('wifiBtn').innerText = 'WIFI BAĞLA';
+        }
+
+        function connectWiFi(askForIp = false) {
+            let ip = savedIp;
+            if (askForIp || !ip) {
+                ip = prompt("Vector Light IP Adresi:", ip || "192.168.10.221");
+                if (!ip) return;
+                savedIp = ip;
+                localStorage.setItem('dmx_wifi_ip', ip);
+            }
+            if (!ip) return;
+            
+            if (ws) disconnectWiFi();
+            updateWiFiLEDs(false);
+            
+            ws = new WebSocket(`ws://${ip}:81`);
+            
+            ws.onopen = () => {
+                console.log('WiFi bağlandı:', ip);
+                updateWiFiLEDs(true);
+                connectionActive = true;
+                reconnectAttempts = 0;
+                startDMX();
+                startWiFiKeepAlive();
+                document.getElementById('wifiBtn').innerText = 'WIFI KES';
+                
+                setInterval(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send("PING");
+                    }
+                }, 8000);
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    if (typeof event.data === 'string') {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === 'dmx_change' && msg.senderId !== clientId) {
+                            applyRemoteChange(msg.channel, msg.value, msg.senderId);
+                        }
+                        else if (msg.type === 'submaster_sync') {
+                            applyRemoteSubmasterSync(msg);
+                        }
+                        else if (msg.type === 'submaster_clear') {
+                            const idx = msg.index;
+                            if (idx >= 0 && idx < 20) {
+                                submasterData[idx] = { channels: [], values: new Map(), time: 2.0, isRecording: false, isPlaying: false, name: `SUB ${idx+1}` };
+                                document.getElementById(`subSlider-${idx}`).value = 0;
+                                document.getElementById(`subVal-${idx}`).innerText = 'OFF';
+                                document.getElementById(`subName-${idx}`).value = `SUB ${idx+1}`;
+                                document.getElementById(`subRec-${idx}`).innerHTML = '🔴 KAYDET';
+                                document.getElementById(`sub-${idx}`).classList.remove('recording', 'active');
+                            }
+                        }
+                        else if (msg.type === 'submaster_clear_all') {
+                            for(let i = 0; i < 20; i++) {
+                                submasterData[i] = { channels: [], values: new Map(), time: 2.0, isRecording: false, isPlaying: false, name: `SUB ${i+1}` };
+                                document.getElementById(`subSlider-${i}`).value = 0;
+                                document.getElementById(`subVal-${i}`).innerText = 'OFF';
+                                document.getElementById(`subName-${i}`).value = `SUB ${i+1}`;
+                                document.getElementById(`subRec-${i}`).innerHTML = '🔴 KAYDET';
+                                document.getElementById(`sub-${i}`).classList.remove('recording', 'active');
+                            }
+                        }
+                        else if (msg.type === 'submaster_value_change') {
+                            handleIncomingSync(msg);
+                        }
+                        else if (msg.type === 'submaster_play_state') {
+                            handleSubmasterPlayState(msg);
+                        }
+                        else if (msg.type === 'submaster_full_sync') {
+                            handleSubmasterFullSync(msg);
+                        }
+                        else if (msg.type === 'submaster_stop') {
+                            handleSubmasterStop(msg);
+                        }
+                    } else if (event.data instanceof ArrayBuffer) {
+                        const receivedFrame = new Uint8Array(event.data);
+                        if (receivedFrame.length === 512) {
+                            for (let i = 0; i < 512; i++) {
+                                globalDmxData[i + 1] = receivedFrame[i];
+                            }
+                            requestAnimationFrame(() => {
+                                for (let ch = 1; ch <= 512; ch++) {
+                                    const val = globalDmxData[ch];
+                                    updateChannelUI(ch, val);
+                                    lastSentFrame[ch] = val;
+                                }
+                                updateActiveChannelCount();
+                            });
+                        }
+                    }
+                } catch(e) {}
+            };
+            
+            ws.onclose = () => {
+                console.log('WiFi bağlantısı kapandı');
+                updateWiFiLEDs(false);
+                if (!usbWriter) { connectionActive = false; }
+                document.getElementById('wifiBtn').innerText = 'WIFI BAĞLA';
+            };
+            
+            ws.onerror = (e) => { 
+                console.error('WebSocket hatası:', e); 
+                updateWiFiLEDs(false); 
+                document.getElementById('wifiBtn').innerText = 'WIFI BAĞLA';
+            };
+        }
+
+        async function toggleWiFi() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                disconnectWiFi();
+                showConnectionModal('ℹ️ WIFI Kesildi', 'DMX çıkışı durduruldu.', 'info');
+            } else {
+                const ip = await showWifiInputModal();
+                if (!ip) return;
+                
+                savedIp = ip;
+                localStorage.setItem('dmx_wifi_ip', ip);
+                
+                if (ws) disconnectWiFi();
+                updateWiFiLEDs(false);
+                
+                showConnectionModal('🔄 WIFI Bağlanıyor...', `IP: ${ip} adresine bağlanılıyor...`, 'wait');
+                
+                ws = new WebSocket(`ws://${ip}:81`);
+                
+                ws.onopen = () => {
+                    console.log('WiFi bağlandı:', ip);
+                    updateWiFiLEDs(true);
+                    connectionActive = true;
+                    reconnectAttempts = 0;
+                    startDMX();
+                    startWiFiKeepAlive();
+                    document.getElementById('wifiBtn').innerText = 'WIFI KES';
+                    showConnectionModal('✅ WIFI Bağlandı', `IP: ${ip} - DMX çıkışı aktif!`, 'success');
+                    
+                    setInterval(() => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send("PING");
+                        }
+                    }, 8000);
+                };
+                
+                ws.onmessage = (event) => {
+                    try {
+                        if (typeof event.data === 'string') {
+                            const msg = JSON.parse(event.data);
+                            if (msg.type === 'dmx_change' && msg.senderId !== clientId) {
+                                applyRemoteChange(msg.channel, msg.value, msg.senderId);
+                            }
+                            else if (msg.type === 'submaster_sync') {
+                                applyRemoteSubmasterSync(msg);
+                            }
+                            else if (msg.type === 'submaster_clear') {
+                                const idx = msg.index;
+                                if (idx >= 0 && idx < 20) {
+                                    submasterData[idx] = { channels: [], values: new Map(), time: 2.0, isRecording: false, isPlaying: false, name: `SUB ${idx+1}` };
+                                    document.getElementById(`subSlider-${idx}`).value = 0;
+                                    document.getElementById(`subVal-${idx}`).innerText = 'OFF';
+                                    document.getElementById(`subName-${idx}`).value = `SUB ${idx+1}`;
+                                    document.getElementById(`subRec-${idx}`).innerHTML = '🔴 KAYDET';
+                                    document.getElementById(`sub-${idx}`).classList.remove('recording', 'active');
+                                }
+                            }
+                            else if (msg.type === 'submaster_clear_all') {
+                                for(let i = 0; i < 20; i++) {
+                                    submasterData[i] = { channels: [], values: new Map(), time: 2.0, isRecording: false, isPlaying: false, name: `SUB ${i+1}` };
+                                    document.getElementById(`subSlider-${i}`).value = 0;
+                                    document.getElementById(`subVal-${i}`).innerText = 'OFF';
+                                    document.getElementById(`subName-${i}`).value = `SUB ${i+1}`;
+                                    document.getElementById(`subRec-${i}`).innerHTML = '🔴 KAYDET';
+                                    document.getElementById(`sub-${i}`).classList.remove('recording', 'active');
+                                }
+                            }
+                            else if (msg.type === 'submaster_value_change') {
+                                handleIncomingSync(msg);
+                            }
+                            else if (msg.type === 'submaster_play_state') {
+                                handleSubmasterPlayState(msg);
+                            }
+                            else if (msg.type === 'submaster_full_sync') {
+                                handleSubmasterFullSync(msg);
+                            }
+                            else if (msg.type === 'submaster_stop') {
+                                handleSubmasterStop(msg);
+                            }
+                        } else if (event.data instanceof ArrayBuffer) {
+                            const receivedFrame = new Uint8Array(event.data);
+                            if (receivedFrame.length === 512) {
+                                for (let i = 0; i < 512; i++) {
+                                    globalDmxData[i + 1] = receivedFrame[i];
+                                }
+                                requestAnimationFrame(() => {
+                                    for (let ch = 1; ch <= 512; ch++) {
+                                        const val = globalDmxData[ch];
+                                        updateChannelUI(ch, val);
+                                        lastSentFrame[ch] = val;
+                                    }
+                                    updateActiveChannelCount();
+                                });
+                            }
+                        }
+                    } catch(e) {}
+                };
+                
+                ws.onclose = () => {
+                    console.log('WiFi bağlantısı kapandı');
+                    updateWiFiLEDs(false);
+                    if (!usbWriter) { connectionActive = false; stopDMX(); }
+                    document.getElementById('wifiBtn').innerText = 'WIFI BAĞLA';
+                };
+                
+                ws.onerror = (e) => { 
+                    console.error('WebSocket hatası:', e); 
+                    updateWiFiLEDs(false); 
+                    document.getElementById('wifiBtn').innerText = 'WIFI BAĞLA';
+                    showConnectionModal('❌ WIFI Hatası', 'Bağlantı kurulamadı! IP adresini kontrol edin.', 'error');
+                };
+            }
+        }
+        
+        if (savedIp) { setTimeout(() => { connectWiFi(false); }, 500); }
+
+        window.addEventListener('beforeunload', () => {
+            stopDMX();
+            stopWiFiKeepAlive();
+            if (usbWriter) { try { usbWriter.releaseLock(); } catch(e) {} }
+            if (usbPort) { try { usbPort.close(); } catch(e) {} }
+            if (ws) { try { ws.close(); } catch(e) {} }
+        });
+
+        function selectSub(idx) { selectedSub = idx; }
+
+        function initSubmasterChannelGrid() {
+            const grid = document.getElementById('submasterAllChannelsGrid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 512; i++) {
+                const c = document.createElement('div');
+                c.className = 'channel-card';
+                c.id = `subChan-${i}`;
+                c.innerHTML = `<div class="channel-number">${i}</div><div class="channel-value">OFF</div><input type="range" min="0" max="255" value="0" oninput="upd(${i},this.value)">`;
+                grid.appendChild(c);
+            }
+            updateActiveChannelCount();
+        }
+
+        function showSubDetails(idx) {
+            const data = submasterData[idx];
+            const modal = document.getElementById('modalContent');
+            
+            if (data.channels.length === 0) {
+                modal.innerHTML = `
+                    <h3>🎚️ SUB ${idx+1} - ${data.name}</h3>
+                    <div class="empty-message">
+                        <p style="font-size: 20px; margin-bottom: 20px;">📭 Henüz kayıtlı kanal yok</p>
+                        <p style="color: #aaa; font-size: 14px;">Kanal kaydetmek için "🔴 KAYDET" butonunu kullanın.</p>
+                    </div>
+                    <button class="modal-close-btn" onclick="closeModal()">KAPAT</button>
+                `;
+            } else {
+                const sortedChannels = [...data.channels].sort((a,b) => a - b);
+                let list = '';
+                sortedChannels.forEach(ch => {
+                    const val = data.values.get(ch) || 0;
+                    list += `<li><strong>Kanal ${ch}:</strong> ${val} (${Math.round(val/2.55)}%)</li>`;
+                });
+                modal.innerHTML = `
+                    <h3>🎚️ SUB ${idx+1} - ${data.name}</h3>
+                    <h4>⏱️ Süre: ${data.time} sn</h4>
+                    <h4>📋 Kayıtlı Kanallar (${data.channels.length} adet):</h4>
+                    <ul style="max-height: 400px; overflow-y: auto;">${list}</ul>
+                    <button class="modal-close-btn" onclick="closeModal()">KAPAT</button>
+                `;
+            }
+            document.getElementById('guideModal').style.display = 'flex';
+        }
+
+        function initSubmasters() {
+            const grid = document.getElementById('submasterGrid');
+            grid.innerHTML = '';
+            for(let i = 0; i < 20; i++) {
+                submasterData[i] = { channels: [], values: new Map(), time: 2.0, isRecording: false, isPlaying: false, name: `SUB ${i+1}` };
+                submasterIntervals[i] = null;
+
+                const card = document.createElement('div');
+                card.className = 'submaster-card';
+                card.id = `sub-${i}`;
+                card.innerHTML = `
+                    <input type="text" class="sub-name-input" id="subName-${i}" value="SUB ${i+1}" maxlength="10">
+                    <input type="range" orient="vertical" class="sub-slider" min="0" max="255" value="0" id="subSlider-${i}">
+                    <div class="sub-value" id="subVal-${i}">OFF</div>
+                    <input type="number" class="sub-time-input" id="subTime-${i}" value="2.0" step="0.1" min="0.1" max="30" placeholder="Sn">
+                    <div class="sub-buttons">
+                        <button class="sub-btn record" id="subRec-${i}">🔴 KAYDET</button>
+                        <button class="sub-btn play" id="subPlay-${i}">▶ OYNAT</button>
+                        <button class="sub-btn goback" id="subGoBack-${i}">◀◀ GERİOYNAT</button>
+                        <button class="sub-btn" id="subStop-${i}">⏹ DURDUR</button>
+                        <button class="sub-btn clear" id="subClear-${i}">🧹 TEMİZLE</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+
+                card.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    showSubDetails(i);
+                });
+
+                const nameInput = document.getElementById(`subName-${i}`);
+                nameInput.addEventListener('input', (e) => { submasterData[i].name = e.target.value; });
+                nameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        nameInput.blur();
+                        submasterData[i].name = nameInput.value;
+                    }
+                });
+                nameInput.addEventListener('click', (e) => e.stopPropagation());
+
+                card.addEventListener('click', (e) => { if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') selectSub(i); });
+
+                const slider = document.getElementById(`subSlider-${i}`);
+                
+                slider.addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value);
+                    updateSubmasterUIAndSync(i, val);
+                });
+
+                document.getElementById(`subRec-${i}`).onclick = (e) => { e.stopPropagation(); toggleRecordSubmaster(i); };
+                document.getElementById(`subPlay-${i}`).onclick = (e) => { e.stopPropagation(); playSubmaster(i); };
+                document.getElementById(`subGoBack-${i}`).onclick = (e) => { e.stopPropagation(); goBackSubmaster(i); };
+                document.getElementById(`subStop-${i}`).onclick = (e) => { e.stopPropagation(); stopSubmaster(i); };
+                document.getElementById(`subClear-${i}`).onclick = (e) => { e.stopPropagation(); clearSubmaster(i); };
+            }
+        }
+
+        function toggleRecordSubmaster(idx) {
+            const data = submasterData[idx];
+            const btn = document.getElementById(`subRec-${idx}`);
+            if(data.isRecording) {
+                data.isRecording = false;
+                btn.innerHTML = '🔴 KAYDET';
+                document.getElementById(`sub-${idx}`).classList.remove('recording');
+                const channels = [], values = new Map();
+                for(let i = 1; i <= 512; i++) if(globalDmxData[i] > 0) { channels.push(i); values.set(i, globalDmxData[i]); }
+                data.channels = channels; data.values = values;
+                let maxValue = 0;
+                for (let val of values.values()) if (val > maxValue) maxValue = val;
+                document.getElementById(`subSlider-${idx}`).value = maxValue;
+                document.getElementById(`subVal-${idx}`).innerText = maxValue === 0 ? 'OFF' : (maxValue === 255 ? 'FULL' : Math.round(maxValue/2.55) + '%');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ KAYDEDİLDİ';
+                btn.style.background = '#32d74b';
+                btn.style.color = '#000';
+                setTimeout(() => { btn.innerHTML = originalText; btn.style.background = ''; btn.style.color = ''; }, 1500);
+                broadcastSubmasterSync(idx);
+            } else {
+                data.isRecording = true;
+                btn.innerHTML = '⏹ KAYDI DURDUR';
+                document.getElementById(`sub-${idx}`).classList.add('recording');
+            }
+        }
+
+        function playSubmaster(idx) {
+            const data = submasterData[idx];
+            if(data.channels.length === 0) { alert('Önce kanal kaydedin!'); return; }
+            if(data.isPlaying) return;
+            
+            const timeSec = parseFloat(document.getElementById(`subTime-${idx}`).value) || 2.0;
+            data.time = timeSec;
+            const slider = document.getElementById(`subSlider-${idx}`);
+            const startValue = parseInt(slider.value);
+            const startTime = Date.now();
+            
+            broadcastSubmasterFullSync(idx, startTime, timeSec, startValue);
+            
+            data.isPlaying = true;
+            document.getElementById(`sub-${idx}`).classList.add('active');
+            
+            if(submasterIntervals[idx]) clearInterval(submasterIntervals[idx]);
+            
+            submasterIntervals[idx] = setInterval(() => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const progress = Math.min(elapsed / timeSec, 1.0);
+                const val = Math.round(startValue + (255 - startValue) * progress);
+                
+                const sliderEl = document.getElementById(`subSlider-${idx}`);
+                const valText = document.getElementById(`subVal-${idx}`);
+                
+                if (sliderEl) sliderEl.value = val;
+                if (valText) {
+                    valText.innerText = val === 0 ? 'OFF' : (val === 255 ? 'FULL' : Math.round(val/2.55) + '%');
+                }
+                
+                if (data.channels.length > 0) {
+                    const ratio = val / 255;
+                    for (let ch of data.channels) {
+                        const finalVal = Math.round((data.values.get(ch) || 255) * ratio);
+                        if (finalVal > globalDmxData[ch]) {
+                            globalDmxData[ch] = finalVal;
+                            updateChannelUI(ch, finalVal);
+                        }
+                    }
+                    updateActiveChannelCount();
+                }
+                
+                if(progress >= 1.0) {
+                    clearInterval(submasterIntervals[idx]);
+                    submasterIntervals[idx] = null;
+                    data.isPlaying = false;
+                    document.getElementById(`sub-${idx}`).classList.remove('active');
+                    broadcastSubmasterPlayState(idx, false, 255);
+                }
+            }, 20);
+        }
+
+        function goBackSubmaster(idx) {
+            const data = submasterData[idx];
+            if(data.channels.length === 0) { alert('Önce kanal kaydedin!'); return; }
+            if(data.isPlaying) return;
+            
+            const timeSec = parseFloat(document.getElementById(`subTime-${idx}`).value) || 2.0;
+            data.time = timeSec;
+            const slider = document.getElementById(`subSlider-${idx}`);
+            const startValue = parseInt(slider.value);
+            
+            if (startValue === 0) return;
+            
+            const startTime = Date.now();
+            const channelsToUpdate = [...data.channels];
+            
+            data.isPlaying = true;
+            document.getElementById(`sub-${idx}`).classList.add('active');
+            
+            if(submasterIntervals[idx]) clearInterval(submasterIntervals[idx]);
+            
+            submasterIntervals[idx] = setInterval(() => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const progress = Math.min(elapsed / timeSec, 1.0);
+                const val = Math.round(startValue * (1 - progress));
+                
+                const sliderEl = document.getElementById(`subSlider-${idx}`);
+                const valText = document.getElementById(`subVal-${idx}`);
+                
+                if (sliderEl) sliderEl.value = val;
+                if (valText) {
+                    valText.innerText = val === 0 ? 'OFF' : (val === 255 ? 'FULL' : Math.round(val/2.55) + '%');
+                }
+                
+                if (data.channels.length > 0) {
+                    const ratio = val / 255;
+                    for (let ch of data.channels) {
+                        const baseVal = data.values.get(ch) || 0;
+                        const finalVal = Math.round(baseVal * ratio);
+                        
+                        let maxVal = 0;
+                        for (let j = 0; j < submasterData.length; j++) {
+                            const sub = submasterData[j];
+                            if (sub.channels.includes(ch)) {
+                                const sSlider = document.getElementById(`subSlider-${j}`);
+                                if (sSlider) {
+                                    const sVal = Math.round((sub.values.get(ch) || 0) * parseInt(sSlider.value) / 255);
+                                    if (sVal > maxVal) maxVal = sVal;
+                                }
+                            }
+                        }
+                        
+                        if (globalDmxData[ch] !== maxVal) {
+                            globalDmxData[ch] = maxVal;
+                            updateChannelUI(ch, maxVal);
+                        }
+                    }
+                    updateActiveChannelCount();
+                }
+                
+                if(progress >= 1.0) {
+                    clearInterval(submasterIntervals[idx]);
+                    submasterIntervals[idx] = null;
+                    data.isPlaying = false;
+                    document.getElementById(`sub-${idx}`).classList.remove('active');
+                    
+                    if (sliderEl) sliderEl.value = 0;
+                    if (valText) valText.innerText = 'OFF';
+                    
+                    recalculateHTPForChannels(channelsToUpdate);
+                    broadcastSubmasterPlayState(idx, false, 0);
+                }
+            }, 20);
+        }
+
+        function stopSubmaster(idx) {
+            if(submasterIntervals[idx]) { 
+                clearInterval(submasterIntervals[idx]); 
+                submasterIntervals[idx] = null; 
+            }
+            submasterData[idx].isPlaying = false;
+            document.getElementById(`sub-${idx}`).classList.remove('active');
+            broadcastSubmasterStop(idx);
+        }
+
+        function clearSubmaster(idx) {
+            stopSubmaster(idx);
+            const data = submasterData[idx];
+            const channelsToRecalc = [...data.channels];
+            
+            if (data.channels.length > 0) {
+                for (let ch of data.channels) {
+                    upd(ch, 0);
+                }
+            }
+            
+            const defaultName = `SUB ${idx+1}`;
+            submasterData[idx] = { channels: [], values: new Map(), time: 2.0, isRecording: false, isPlaying: false, name: defaultName };
+            document.getElementById(`subSlider-${idx}`).value = 0;
+            document.getElementById(`subVal-${idx}`).innerText = 'OFF';
+            document.getElementById(`subName-${idx}`).value = defaultName;
+            const btn = document.getElementById(`subRec-${idx}`);
+            btn.innerHTML = '🔴 KAYDET';
+            btn.style.background = '';
+            btn.style.color = '';
+            document.getElementById(`sub-${idx}`).classList.remove('recording', 'active');
+            
+            recalculateHTPForChannels(channelsToRecalc);
+            updateActiveChannelCount();
+            broadcastSubmasterClear(idx);
+        }
+
+        function releaseAllSubmasters() { 
+            for(let i = 0; i < 20; i++) {
+                stopSubmaster(i);
+                broadcastSubmasterStop(i);
+            }
+        }
+        
+        function stopAllSubmasters() { 
+            allOff();
+            
+            for(let i = 0; i < 20; i++) { 
+                stopSubmaster(i);
+                const defaultName = `SUB ${i+1}`;
+                submasterData[i] = { channels: [], values: new Map(), time: 2.0, isRecording: false, isPlaying: false, name: defaultName };
+                document.getElementById(`subSlider-${i}`).value = 0;
+                document.getElementById(`subVal-${i}`).innerText = 'OFF';
+                document.getElementById(`subName-${i}`).value = defaultName;
+                const btn = document.getElementById(`subRec-${i}`);
+                btn.innerHTML = '🔴 KAYDET';
+                btn.style.background = '';
+                btn.style.color = '';
+                document.getElementById(`sub-${i}`).classList.remove('recording', 'active');
+            }
+            updateActiveChannelCount();
+            broadcastAllSubmastersClear();
+        }
+
+        function init() {
+            const g = document.getElementById('dmxGrid');
+            g.innerHTML = '';
+            for (let i = 1; i <= 512; i++) {
+                const c = document.createElement('div');
+                c.className = 'channel-card'; c.id = `c-${i}`;
+                c.innerHTML = `<div class="channel-number">${i}</div><div id="v-${i}" class="channel-value">OFF</div><input type="range" min="0" max="255" value="0" oninput="upd(${i},this.value)">`;
+                c.onclick = (e) => { if (e.target.tagName !== 'INPUT') sel(i); };
+                g.appendChild(c);
+            }
+            initSubmasterChannelGrid();
+            initSubmasters();
+        }
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                const tabId = btn.dataset.tab;
+                document.getElementById(`tab-${tabId}`).classList.add('active');
+                const keypad = document.getElementById('keypadPanel');
+                keypad.style.display = tabId === 'submaster' ? 'none' : 'flex';
+            });
+        });
+
+        window.upd = upd;
+        window.k = k;
+        window.back = back;
+        window.exe = exe;
+        window.qFull = qFull;
+        window.qOff = qOff;
+        window.allOff = allOff;
+        window.handleClr = handleClr;
+        window.toggleUSB = toggleUSB;
+        window.toggleWiFi = toggleWiFi;
+        window.releaseAllSubmasters = releaseAllSubmasters;
+        window.stopAllSubmasters = stopAllSubmasters;
+        window.exportSubmastersToFile = exportSubmastersToFile;
+        window.importSubmastersFromFile = importSubmastersFromFile;
+        window.openGuideModal = openGuideModal;
+        window.closeModal = closeModal;
+
+        init();
+    </script>    
+</body>
+</html>
